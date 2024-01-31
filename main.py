@@ -1,92 +1,109 @@
 import sys
 import os
-import boto3
+import threading
+import time
+
+import requests
 from PySide6.QtWidgets import (
     QApplication,
     QWidget,
     QVBoxLayout,
     QPushButton,
     QLabel,
-    QFileDialog,
 )
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+
+import util
 from analyzer.analyzer import Analyzer
 
-boto3.setup_default_session(profile_name="video-test")
-
-
-class S3Uploader(FileSystemEventHandler):
-    def __init__(self, bucket_name, folder_path):
-        super().__init__()
-        self.bucket_name = bucket_name
-        self.folder_path = folder_path
-        self.s3_client = boto3.client("s3", region_name="us-west-2")
-
-    def on_created(self, event):
-        if event.is_directory:
-            return
-
-        file_path = event.src_path
-        key = os.path.relpath(file_path, self.folder_path)
-        print(f"Detected new file: {file_path}")
-        Analyzer.analyze(file_path)
-        # self.upload_to_s3(file_path, key)
-
-    def upload_to_s3(self, file_path, key):
-        try:
-            self.s3_client.upload_file(file_path, self.bucket_name, key)
-            print(f"Uploaded {file_path} to S3 bucket")
-        except Exception as e:
-            print(f"Error uploading {file_path} to S3: {str(e)}")
+import config
+from data_file import DataFile
 
 
 class S3UploaderApp(QWidget):
-    def __init__(self):
+    def __init__(self, processed_files: set[str]):
         super().__init__()
         self.init_ui()
-        self.folder_path = ""
-        self.bucket_name = "noise-tracker-test"
         self.s3_uploader = None
+        self.processed_files = processed_files
 
     def init_ui(self):
-        self.setWindowTitle("S3 Uploader")
+        self.setWindowTitle("Noise Tracker")
         self.setGeometry(300, 300, 400, 200)
 
-        self.label = QLabel("Select a folder to monitor:")
         self.folder_path_label = QLabel("Folder Path: ")
 
-        self.select_folder_button = QPushButton("Select Folder", self)
-        self.select_folder_button.clicked.connect(self.select_folder)
+        self.select_folder_button = QPushButton("Run", self)
+        self.select_folder_button.clicked.connect(self.run)
 
         layout = QVBoxLayout()
-        layout.addWidget(self.label)
         layout.addWidget(self.select_folder_button)
         layout.addWidget(self.folder_path_label)
 
         self.setLayout(layout)
 
-    def select_folder(self):
-        folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
-        if folder_path:
-            self.folder_path = folder_path
-            self.folder_path_label.setText(f"Folder Path: {self.folder_path}")
+    def run(self):
+        self.folder_path_label.setText(f"Folder Path: {config.DIRECTORY_TO_WATCH}")
+        analyze_thread = threading.Thread(target=self.analyze_files, args=())
+        upload_thread = threading.Thread(target=self.upload_results, args=())
+        analyze_thread.start()
+        upload_thread.start()
 
-            if not self.s3_uploader:
-                self.s3_uploader = S3Uploader(self.bucket_name, self.folder_path)
-                observer = Observer()
-                observer.schedule(self.s3_uploader, self.folder_path, recursive=True)
-                observer.start()
+    def analyze_files(self):
+        while True:
+            current_files = util.find_files(
+                config.DIRECTORY_TO_WATCH, config.FILE_STRUCTURE_PATTERN
+            )
+            new_files = current_files - self.processed_files
+            for file in new_files:
+                print(f"Detected new file: {file}")
+                data_file = DataFile(file)
+                Analyzer.analyze(data_file)
+                with open(config.PROCESSED_FILES_PATH, "a") as f:
+                    f.write(file + "\n")
+                self.processed_files.add(file)
+            time.sleep(config.SCAN_INTERVAL)
 
-                print(f"Monitoring folder: {self.folder_path}")
+    def upload_results(self):
+        while True:
+            # upload file and delete after upload is done
+            files = os.listdir(config.RESULTS_TMP_PATH)
+            for file in files:
+                object_key = (
+                    f"{config.HYDROPHONE_OPERATOR_ID}/{config.HYDROPHONE_ID}/{file}"
+                )
+                presigned_response = util.get_presigned_upload_url(
+                    config.BUCKET, object_key
+                )
+                with open(f"{config.RESULTS_TMP_PATH}/{file}", "rb") as f:
+                    files = {"file": (f"{config.RESULTS_TMP_PATH}/{file}", f)}
+                    http_response = requests.post(
+                        presigned_response["url"],
+                        data=presigned_response["fields"],
+                        files=files,
+                    )
+                if http_response.status_code != 204:
+                    raise Exception(
+                        f"Failed to upload file {file} to S3. Status code: {http_response.status_code}"
+                    )
+                os.remove(f"{config.RESULTS_TMP_PATH}/{file}")
+            time.sleep(config.UPLOAD_INTERVAL)
 
 
-def main():
+def main(processed_files: set[str]):
     app = QApplication(sys.argv)
-    s3_uploader_app = S3UploaderApp()
+    s3_uploader_app = S3UploaderApp(processed_files)
     s3_uploader_app.show()
     sys.exit(app.exec())
 
 
 if __name__ == "__main__":
-    main()
+    if not os.path.exists(config.RESULTS_TMP_PATH):
+        os.makedirs(config.RESULTS_TMP_PATH)
+    if not os.path.exists(config.PROCESSED_FILES_PATH):
+        with open(config.PROCESSED_FILES_PATH, "w") as f:
+            f.write("")
+    processed_files: set[str] = set()
+    with open(config.PROCESSED_FILES_PATH, "r") as f:
+        for line in f:
+            processed_files.add(line.strip())
+    main(processed_files)
