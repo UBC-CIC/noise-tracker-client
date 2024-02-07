@@ -1,29 +1,55 @@
-from datetime import datetime
+import os
+import time
+import threading
 import soundfile as sf
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt
+import util
+from analyzer.data_file import DataFile
 
-import config
-from data_file import DataFile
 
+class Analyzer(threading.Thread):
+    def __init__(self, config):
+        super().__init__()
+        if not os.path.exists(config["results_tmp_path"]):
+            os.makedirs(config["results_tmp_path"])
+        if not os.path.exists(config["processed_files_path"]):
+            with open(config["processed_files_path"], "w") as f:
+                f.write("")
+        processed_files: set[str] = set()
+        with open(config["processed_files_path"], "r") as f:
+            for line in f:
+                processed_files.add(line.strip())
+        self.processed_files = processed_files
+        self.config = config
 
-class Analyzer:
-    @staticmethod
-    def analyze(data_file):
-        tmp_results_path = 1
-        if "spectrogram" in config.METRICS:
-            img_path = Analyzer.spectrogram(data_file)
-        if "spl" in config.METRICS:
-            Analyzer.spl(data_file)
-        return
+    def run(self):
+        while True:
+            for hydrophone in self.config["hydrophones"]:
+                current_files = util.find_files(
+                    hydrophone["directory_to_watch"],
+                    hydrophone["file_structure_pattern"],
+                )
+                new_files = current_files - self.processed_files
+                for file in new_files:
+                    print(f"Detected new file: {file}")
+                    data_file = DataFile(
+                        f"{hydrophone['directory_to_watch']}/{file}", hydrophone
+                    )
+                    if "spectrogram" in hydrophone["metrics"]:
+                        self.spectrogram(data_file)
+                    if "spl" in hydrophone["metrics"]:
+                        self.spl(data_file)
+                    with open(self.config["processed_files_path"], "a") as f:
+                        f.write(file + "\n")
+                    self.processed_files.add(file)
+                time.sleep(self.config["scan_interval"])
 
-    @staticmethod
-    def spl(file_path):
+    def spl(self, file_path):
         pass
 
-    @staticmethod
-    def spectrogram(data_file: DataFile):
+    def spectrogram(self, data_file: DataFile):
         print(f"Reading data from {data_file.file_path}")
         x, sample_rate = sf.read(data_file.file_path)
         print(f"Sample rate: {sample_rate}")
@@ -90,9 +116,7 @@ class Analyzer:
         plt.xlabel("Seconds")
         plt.ylabel("Frequency (Hz)")
         plt.title("Calibrated spectrum levels")
-        img_path = (
-            f"{config.RESULTS_TMP_PATH}/{data_file.file_time_name}_spectrogram.png"
-        )
+        img_path = f"{self.config['results_tmp_path']}/{data_file.file_time_name()}_spectrogram.png"
         plt.savefig(img_path)
         return img_path
 

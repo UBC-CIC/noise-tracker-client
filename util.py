@@ -1,7 +1,6 @@
 import os
 import re
 import requests
-import config
 
 
 def find_files(directory, pattern):
@@ -13,7 +12,7 @@ def find_files(directory, pattern):
     return file_list
 
 
-def get_presigned_upload_url(bucket_name, object_key):
+def get_presigned_upload_url(url, bucket_name, object_key):
     data = {"bucket_name": bucket_name, "object_key": object_key}
-    response = requests.get(config.PRESIGNED_UPLOAD_LINK_GENERATOR, json=data).json()
+    response = requests.get(url, json=data).json()
     return response["body"]
