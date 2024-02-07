@@ -9,7 +9,7 @@ class DataFile:
         self.hydrophone: dict = hydrophone
 
     def file_time_name(self):
-        return f"{self.hydrophone['id']}_{self.timestamp.strftime('%Y-%m-%d-%H-%M-%S')}"
+        return f"{self.hydrophone['id']}_{self.timestamp.strftime('%Y/%m/%d-%H-%M-%S')}"
 
     @staticmethod
     def parse_timestamp(file_path, hydrophone):
