@@ -16,7 +16,8 @@ class Uploader(threading.Thread):
             for file in files:
                 file_name, extension = file.split(".")
                 hydrophone_id, timestamp, metric = file_name.split("_")
-                object_key = f"{self.config['operator_id']}/{hydrophone_id}/{metric}/{timestamp}.{extension}"
+                year, month, day, hour, minute, second = timestamp.split("-")
+                object_key = f"{self.config['operator_id']}/{hydrophone_id}/{metric}/{year}/{month}/{timestamp}.{extension}"
                 presigned_response = util.get_presigned_upload_url(
                     self.config["presigned_upload_link_generator"],
                     self.config["bucket"],
