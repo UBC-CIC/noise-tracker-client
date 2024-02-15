@@ -12,6 +12,8 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QMessageBox,
+    QCheckBox,
+    QGridLayout,
 )
 
 from analyzer.analyzer import Analyzer
@@ -78,15 +80,61 @@ class MainWindow(QMainWindow):
             )
             response.raise_for_status()
             configs = response.json()
-            with open("config.json", "w") as f:
-                json.dump(configs, f)
+            dialog = QWidget()
 
-            QMessageBox.information(
-                None, "Success", "Configs retrieved and saved successfully."
+            layout = QVBoxLayout(dialog)
+
+            checkboxes = {}
+            for hydrophone in configs["hydrophones"]:
+                checkbox = QCheckBox(hydrophone["id"], dialog)
+                layout.addWidget(checkbox)
+                checkboxes[hydrophone["id"]] = checkbox
+
+            button_box = QGridLayout()
+            save_button = QPushButton("Save Selected")
+            cancel_button = QPushButton("Cancel")
+            button_box.addWidget(save_button, 0, 0)
+            button_box.addWidget(cancel_button, 0, 1)
+            layout.addLayout(button_box)
+
+            save_button.clicked.connect(
+                lambda: self.save_selected_configs(checkboxes, configs, dialog)
             )
-            self.show_empty_ui()
+            cancel_button.clicked.connect(lambda: dialog.close())
+
+            dialog.setWindowTitle("Select Hydrophones to Monitor")
+            dialog.setLayout(layout)
+            dialog.show()
+
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(None, "Error", f"Failed to retrieve configs: {e}")
+
+    def save_selected_configs(self, checkboxes, config, dialog):
+        selected_hydrophones = [
+            hydrophone_id
+            for hydrophone_id, checkbox in checkboxes.items()
+            if checkbox.isChecked()
+        ]
+        filtered_hydrophones = [
+            hydrophone
+            for hydrophone in config["hydrophones"]
+            if hydrophone["id"] in selected_hydrophones
+        ]
+        filtered_configs = config.copy()
+        filtered_configs["hydrophones"] = filtered_hydrophones
+
+        try:
+            with open("config.json", "w") as f:
+                json.dump(filtered_configs, f)
+
+            QMessageBox.information(
+                None, "Success", "Selected configs retrieved and saved successfully."
+            )
+            self.show_empty_ui()
+            dialog.close()
+
+        except Exception as e:
+            QMessageBox.critical(None, "Error", f"Failed to save configs: {e}")
 
 
 if __name__ == "__main__":
