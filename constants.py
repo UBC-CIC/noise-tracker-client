@@ -1,0 +1,5 @@
+BUCKET = "noise-tracker-hydrophones-data"
+PRESIGNED_UPLOAD_LINK_GENERATOR = "https://glt2nqvvs9.execute-api.us-east-1.amazonaws.com/test/generate-presigned-upload-url"
+PROCESSED_FILES_PATH = "./processed_files.txt"
+RESULTS_TMP_PATH = "./results_tmp"
+GET_OPERATOR_DETAILS_URL = "https://glt2nqvvs9.execute-api.us-east-1.amazonaws.com/test/get-operator-config?operator_id={}"

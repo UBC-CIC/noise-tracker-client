@@ -5,6 +5,8 @@ import soundfile as sf
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt
+
+import constants
 import util
 from analyzer.data_file import DataFile
 
@@ -12,13 +14,13 @@ from analyzer.data_file import DataFile
 class Analyzer(threading.Thread):
     def __init__(self, config):
         super().__init__()
-        if not os.path.exists(config["results_tmp_path"]):
-            os.makedirs(config["results_tmp_path"])
-        if not os.path.exists(config["processed_files_path"]):
-            with open(config["processed_files_path"], "w") as f:
+        if not os.path.exists(constants.RESULTS_TMP_PATH):
+            os.makedirs(constants.RESULTS_TMP_PATH)
+        if not os.path.exists(constants.PROCESSED_FILES_PATH):
+            with open(constants.PROCESSED_FILES_PATH, "w") as f:
                 f.write("")
         processed_files: set[str] = set()
-        with open(config["processed_files_path"], "r") as f:
+        with open(constants.PROCESSED_FILES_PATH, "r") as f:
             for line in f:
                 processed_files.add(line.strip())
         self.processed_files = processed_files
@@ -38,10 +40,10 @@ class Analyzer(threading.Thread):
                         f"{hydrophone['directory_to_watch']}/{file}", hydrophone
                     )
                     if "spectrogram" in hydrophone["metrics"]:
-                        self.spectrogram(data_file)
+                        self.spectrogram(data_file, hydrophone)
                     if "spl" in hydrophone["metrics"]:
                         self.spl(data_file)
-                    with open(self.config["processed_files_path"], "a") as f:
+                    with open(constants.PROCESSED_FILES_PATH, "a") as f:
                         f.write(file + "\n")
                     self.processed_files.add(file)
                 time.sleep(self.config["scan_interval"])
@@ -49,7 +51,7 @@ class Analyzer(threading.Thread):
     def spl(self, file_path):
         pass
 
-    def spectrogram(self, data_file: DataFile):
+    def spectrogram(self, data_file: DataFile, hydrophone: dict[str, any]):
         print(f"Reading data from {data_file.file_path}")
         x, sample_rate = sf.read(data_file.file_path)
         print(f"Sample rate: {sample_rate}")
@@ -70,43 +72,13 @@ class Analyzer(threading.Thread):
             psd = 10 * np.log10(psd)
             sg[:, x] = psd
 
-        tck = scipy.interpolate.splrep(calfreq, calsens, s=0)
+        tck = scipy.interpolate.splrep(
+            hydrophone["calibration_curve"]["frequency"],
+            hydrophone["calibration_curve"]["sensitivity"],
+            s=0,
+        )
         isens = scipy.interpolate.splev(f, tck, der=0)
         isensg = np.transpose(np.tile(isens, [nseg, 1]))
-
-        # x, sample_rate = sf.read(file_path)
-        # v = x * 3  # convert scaled voltage to volts
-        # print(f"Sample rate: {sample_rate}")
-        # nsec = (v.size) / sample_rate  # number of seconds in vector
-        # spa = 1  # seconds per average
-        # nseg = int(nsec / spa)
-        # print(f"{nseg} segments of length {spa} seconds in {nsec} seconds of audio")
-        # nfreq = int(sample_rate / 2 + 1)
-        # LTSA = np.empty((nfreq, nseg), float)
-        # w = scipy.signal.get_window("hann", sample_rate)
-        # # process LTSA
-        # for x in range(0, nseg):
-        #     cstart = x * spa * sample_rate
-        #     cend = (x + 1) * spa * sample_rate
-        #     f, psd = scipy.signal.welch(
-        #         v[cstart:cend], fs=sample_rate, window=w, nfft=sample_rate
-        #     )
-        #     psd = 10 * np.log10(psd) + 177.9
-        #     LTSA[:, x] = psd
-
-        # plt.figure(dpi=300)
-        # im = plt.imshow(LTSA, aspect="auto", origin="lower", vmin=30, vmax=100)
-        # plt.yscale("log")
-        # plt.ylim(10, 1000)
-        # plt.colorbar(im)
-        # plt.xlabel("Minute of day")
-        # plt.ylabel("Frequency (Hz)")
-        # plt.title("Calibrated spectrum levels")
-        # plt.show()
-        # save LTSA to file
-        # np.save("LTSA.npy", LTSA)
-        # # save compressed
-        # np.savez_compressed("LTSA.npz", LTSA)
 
         plt.figure(dpi=300)
         im = plt.imshow(sg - isensg, aspect="auto", origin="lower", vmin=30, vmax=100)
@@ -116,56 +88,8 @@ class Analyzer(threading.Thread):
         plt.xlabel("Seconds")
         plt.ylabel("Frequency (Hz)")
         plt.title("Calibrated spectrum levels")
-        img_path = f"{self.config['results_tmp_path']}/{data_file.file_time_name()}_spectrogram.png"
+        img_path = (
+            f"{constants.RESULTS_TMP_PATH}/{data_file.file_time_name()}_spectrogram.png"
+        )
         plt.savefig(img_path)
         return img_path
-
-
-calfreq = [
-    0,
-    250,
-    10000,
-    20100,
-    30100,
-    40200,
-    50200,
-    60200,
-    70300,
-    80300,
-    90400,
-    100400,
-    110400,
-    120500,
-    130500,
-    140500,
-    150600,
-    160600,
-    170700,
-    180700,
-    190700,
-    200000,
-]
-calsens = [
-    -177.90,
-    -177.90,
-    -176.80,
-    -176.35,
-    -177.05,
-    -177.35,
-    -177.30,
-    -178.05,
-    -178.00,
-    -178.40,
-    -178.85,
-    -180.25,
-    -180.50,
-    -179.90,
-    -180.15,
-    -180.20,
-    -180.75,
-    -180.90,
-    -181.45,
-    -181.30,
-    -180.75,
-    -180.30,
-]

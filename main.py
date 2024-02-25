@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
 )
 
+import constants
 from analyzer.analyzer import Analyzer
 from uploader.uploader import Uploader
 
@@ -75,9 +76,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            response = requests.get(
-                f"https://glt2nqvvs9.execute-api.us-east-1.amazonaws.com/test/get-operator-config"
-            )
+            response = requests.get(constants.GET_OPERATOR_DETAILS_URL.format(user_id))
             response.raise_for_status()
             configs = response.json()
             dialog = QWidget()

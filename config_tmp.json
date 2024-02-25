@@ -7,13 +7,14 @@
         "spectrogram"
       ],
       "directory_to_watch": "/Users/arshia/repos/cic/noise-tracking/client/test",
-      "file_structure_pattern": "^337_(?P<year>\\d{4})(?P<month>\\d{2})(?P<day>\\d{2})_(?P<hour>\\d{2})(?P<minute>\\d{2})(?P<second>\\d{2})_.*\\.wav$"
+      "file_structure_pattern": "^337_(?P<year>\\d{4})(?P<month>\\d{2})(?P<day>\\d{2})_(?P<hour>\\d{2})(?P<minute>\\d{2})(?P<second>\\d{2})_.*\\.wav$",
+      "sample_rate": 200000,
+      "calibration_curve": {
+        "frequency": [0, 250, 10000, 20100, 30100, 40200, 50200, 60200, 70300, 80300, 90400, 100400, 110400, 120500, 130500, 140500, 150600, 160600, 170700, 180700, 190700, 200000],
+        "sensitivity": [-177.90, -177.90, -176.80, -176.35, -177.05, -177.35, -177.30, -178.05, -178.00, -178.40, -178.85, -180.25, -180.50, -179.90, -180.15, -180.20, -180.75, -180.90, -181.45, -181.30, -180.75, -180.30]
+      }
     }
   ],
   "scan_interval": 5,
-  "upload_interval": 5,
-  "bucket": "noise-tracker-hydrophones-data",
-  "presigned_upload_link_generator": "https://glt2nqvvs9.execute-api.us-east-1.amazonaws.com/test/generate-presigned-upload-url",
-  "processed_files_path": "./processed_files.txt",
-  "results_tmp_path": "./results_tmp"
+  "upload_interval": 5
 }

@@ -2,6 +2,8 @@ import os
 import threading
 import time
 import requests
+
+import constants
 import util
 
 
@@ -12,15 +14,15 @@ class Uploader(threading.Thread):
 
     def run(self):
         while True:
-            files = os.listdir(self.config["results_tmp_path"])
+            files = os.listdir(constants.RESULTS_TMP_PATH)
             for file in files:
                 file_name, extension = file.split(".")
                 hydrophone_id, timestamp, metric = file_name.split("_")
                 year, month, day, hour, minute, second = timestamp.split("-")
                 object_key = f"{self.config['operator_id']}/{hydrophone_id}/{metric}/{year}/{month}/{timestamp}.{extension}"
                 presigned_response = util.get_presigned_upload_url(
-                    self.config["presigned_upload_link_generator"],
-                    self.config["bucket"],
+                    constants.PRESIGNED_UPLOAD_LINK_GENERATOR,
+                    constants.BUCKET,
                     object_key,
                 )
                 with open(f"{self.config['results_tmp_path']}/{file}", "rb") as f:
@@ -34,5 +36,5 @@ class Uploader(threading.Thread):
                     raise Exception(
                         f"Failed to upload file {file} to S3. Status code: {http_response.status_code}"
                     )
-                os.remove(f"{self.config['results_tmp_path']}/{file}")
+                os.remove(f"{constants.RESULTS_TMP_PATH}/{file}")
             time.sleep(self.config["upload_interval"])
