@@ -14,6 +14,7 @@ from analyzer.data_file import DataFile
 class Analyzer(threading.Thread):
     def __init__(self, config):
         super().__init__()
+        self.__stop_event = threading.Event()
         if not os.path.exists(constants.RESULTS_TMP_PATH):
             os.makedirs(constants.RESULTS_TMP_PATH)
         if not os.path.exists(constants.PROCESSED_FILES_PATH):
@@ -26,8 +27,14 @@ class Analyzer(threading.Thread):
         self.processed_files = processed_files
         self.config = config
 
+    def stop(self):
+        self.__stop_event.set()
+
+    def stopped(self):
+        return self.__stop_event.is_set()
+
     def run(self):
-        while True:
+        while True and not self.stopped():
             for hydrophone in self.config["hydrophones"]:
                 current_files = util.find_files(
                     hydrophone["directory_to_watch"],

@@ -25,6 +25,9 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        self.analyzer_thread = None
+        self.uploader_thread = None
+
         self.setWindowTitle("Configuration App")
         self.setGeometry(100, 100, 400, 200)
 
@@ -35,6 +38,13 @@ class MainWindow(QMainWindow):
         central_widget.setLayout(layout)
 
         self.check_config()
+
+    def closeEvent(self, event):
+        if self.analyzer_thread:
+            self.analyzer_thread.stop()
+        if self.uploader_thread:
+            self.uploader_thread.stop()
+        event.accept()
 
     def check_config(self):
         if os.path.exists("config.json"):
@@ -53,10 +63,12 @@ class MainWindow(QMainWindow):
 
         with open("config.json", "r") as f:
             config = json.load(f)
-        analyzer_thread = Analyzer(config)
-        uploader_thread = Uploader(config)
-        analyzer_thread.start()
-        uploader_thread.start()
+
+        self.analyzer_thread = Analyzer(config)
+        self.uploader_thread = Uploader(config)
+
+        self.analyzer_thread.start()
+        self.uploader_thread.start()
 
     def show_config_input(self):
         label = QLabel("Enter Operator ID:")

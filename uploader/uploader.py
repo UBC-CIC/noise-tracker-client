@@ -10,10 +10,17 @@ import util
 class Uploader(threading.Thread):
     def __init__(self, config):
         super().__init__()
+        self.__stop_event = threading.Event()
         self.config = config
 
+    def stop(self):
+        self.__stop_event.set()
+
+    def stopped(self):
+        return self.__stop_event.is_set()
+
     def run(self):
-        while True:
+        while True and not self.stopped():
             files = os.listdir(constants.RESULTS_TMP_PATH)
             for file in files:
                 file_name, extension = file.split(".")
