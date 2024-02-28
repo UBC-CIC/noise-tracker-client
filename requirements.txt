@@ -1,10 +1,13 @@
 aiohttp==3.9.1
 aiosignal==1.3.1
+altgraph==0.17.4
 attrs==23.1.0
 black==23.12.0
 boto3==1.34.2
 botocore==1.34.2
+certifi==2023.11.17
 cffi==1.16.0
+charset-normalizer==3.3.2
 click==8.1.7
 contourpy==1.2.0
 cycler==0.12.1
@@ -13,6 +16,7 @@ frozenlist==1.4.1
 idna==3.6
 jmespath==1.0.1
 kiwisolver==1.4.5
+macholib==1.16.3
 matplotlib==3.8.2
 multidict==6.0.4
 mypy-extensions==1.0.0
@@ -22,11 +26,14 @@ pathspec==0.12.1
 Pillow==10.1.0
 platformdirs==4.1.0
 pycparser==2.21
+pyinstaller==6.4.0
+pyinstaller-hooks-contrib==2024.1
 pyparsing==3.1.1
 PySide6==6.6.1
 PySide6-Addons==6.6.1
 PySide6-Essentials==6.6.1
 python-dateutil==2.8.2
+requests==2.31.0
 s3transfer==0.9.0
 scipy==1.11.4
 shiboken6==6.6.1

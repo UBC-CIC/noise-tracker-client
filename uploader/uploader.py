@@ -32,8 +32,8 @@ class Uploader(threading.Thread):
                     constants.BUCKET,
                     object_key,
                 )
-                with open(f"{self.config['results_tmp_path']}/{file}", "rb") as f:
-                    files = {"file": (f"{self.config['results_tmp_path']}/{file}", f)}
+                with open(f"{constants.RESULTS_TMP_PATH}/{file}", "rb") as f:
+                    files = {"file": (f"{constants.RESULTS_TMP_PATH}/{file}", f)}
                     http_response = requests.post(
                         presigned_response["url"],
                         data=presigned_response["fields"],

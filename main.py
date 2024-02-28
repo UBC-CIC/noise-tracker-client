@@ -47,7 +47,7 @@ class MainWindow(QMainWindow):
         event.accept()
 
     def check_config(self):
-        if os.path.exists("config.json"):
+        if os.path.exists(constants.CONFIG_PATH):
             self.show_empty_ui()
         else:
             self.show_config_input()
@@ -61,7 +61,7 @@ class MainWindow(QMainWindow):
         label = QLabel("Configuration already exists.")
         layout.addWidget(label)
 
-        with open("config.json", "r") as f:
+        with open(constants.CONFIG_PATH, "r") as f:
             config = json.load(f)
 
         self.analyzer_thread = Analyzer(config)
@@ -135,7 +135,7 @@ class MainWindow(QMainWindow):
         filtered_configs["hydrophones"] = filtered_hydrophones
 
         try:
-            with open("config.json", "w") as f:
+            with open(constants.CONFIG_PATH, "w") as f:
                 json.dump(filtered_configs, f)
 
             QMessageBox.information(
@@ -149,6 +149,8 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
+    if not os.path.exists(constants.BASE_PATH):
+        os.makedirs(constants.BASE_PATH)
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
