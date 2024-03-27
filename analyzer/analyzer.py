@@ -1,14 +1,18 @@
+import json
 import os
 import time
 import threading
+import datetime
 import soundfile as sf
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt
+import pandas as pd
 
 import constants
 import util
 from analyzer.data_file import DataFile
+from logger import logger
 
 
 class Analyzer(threading.Thread):
@@ -42,31 +46,128 @@ class Analyzer(threading.Thread):
                 )
                 new_files = current_files - self.processed_files
                 for file in new_files:
-                    print(f"Detected new file: {file}")
+                    logger.info(f"Detected new file: {file}")
                     data_file = DataFile(
                         f"{hydrophone['directory_to_watch']}/{file}", hydrophone
                     )
                     if "spectrogram" in hydrophone["metrics"]:
+                        logger.info("Generating spectrogram")
                         self.spectrogram(data_file, hydrophone)
                     if "spl" in hydrophone["metrics"]:
+                        logger.info("Calculating SPL")
                         self.spl(data_file)
                     with open(constants.PROCESSED_FILES_PATH, "a") as f:
                         f.write(file + "\n")
                     self.processed_files.add(file)
+                    logger.info(f"Processing finished for file: {file}")
                 time.sleep(self.config["scan_interval"])
 
-    def spl(self, file_path):
+    def spl(self, data_file: DataFile):
+        x, sample_rate = sf.read(data_file.file_path)
+        # break x to 60 second chunks
+        chunk_size = 60 * sample_rate
+        chunks = [x[i : i + chunk_size] for i in range(0, len(x), chunk_size)]
+        spls = {}
+        for i, chunk in enumerate(chunks):
+            timestamp = data_file.timestamp + datetime.timedelta(seconds=i * 60)
+            if len(chunk) == 60 * sample_rate:
+                spls[timestamp] = self.chunk_spl(chunk, sample_rate)
+        for timestamp, spl in spls.items():
+            result_path = f"{constants.RESULTS_TMP_PATH}/{data_file.hydrophone['id']}_{timestamp.strftime('%Y-%m-%d-%H-%M-%S')}_spl.json"
+            json.dump(spl.to_dict(orient="records"), open(result_path, "w"), indent=2)
+
+    def chunk_spl(self, audioIn: np.array, fs: int):
+        if len(audioIn) != 60.0 * fs:
+            raise ValueError("Audio chunk is not 60 seconds long")
+        if audioIn.ndim != 1:
+            pass
+        # computes spectrogram 1 Hz resolution (linear units)
+        # -----------
+        df = 0.1  # the minimum df for a 60s file is 0.1/6 = 0.166
+        NFFT = int(fs / float(df))
+        # -----------
+        # --- FFT WINDOW
+        noverlap_par = int(NFFT * 0.5)
+        window_par = scipy.signal.get_window("hann", Nx=NFFT, fftbins=True)
+        # ---
+        f_vals, t_vals, psdArr = scipy.signal.spectrogram(
+            audioIn,
+            fs=fs,
+            nperseg=NFFT,
+            nfft=NFFT,
+            window=window_par,
+            noverlap=noverlap_par,
+            return_onesided=True,
+            scaling="density",
+            mode="psd",
+        )
+        #
+        psd = np.mean(psdArr, axis=1)
+        # RMS
+        psdRMS = psd / (np.sqrt(2))
+        # apply calibration
         pass
+        # if callable(cal_func):
+        # 	for i in range(len(psdRMS)):
+        # 		psdRMS[i] = psdRMS[i] / ( 10**(cal_func(f_vals[i])/10.0) )
+
+        # format output
+        df_psd = pd.DataFrame()
+        df_psd["f"] = f_vals + 1
+        df_psd["psd"] = psdRMS
+        # compile hybrid frequency bands
+        # ---
+        f_band_zero = np.array([[0.0, 0.0, 0.5]])
+        # ---
+        f_bands_lin = []
+        for it_1 in np.arange(1, 456.0, 1):
+            f_c = it_1
+            f_l = f_c - 0.5
+            f_h = f_c + 0.5
+            f_bands_lin.append([f_l, f_c, f_h])
+        # ---
+        f_z = 1000.0
+        it_min = int(np.log10(456.0 / f_z) * 1000.0)
+        it_max = int(np.log10((fs * 0.5) / f_z) * 1000.0)
+        #
+        f_bands_md = []
+        for it_0 in range(it_min, it_max, 1):
+            f_c = f_z * 10 ** (it_0 / 1000.0)
+            f_l = f_c * 10 ** (-1.0 / 2000.0)
+            f_h = f_c * 10 ** (+1.0 / 2000.0)
+            f_bands_md.append([f_l, f_c, f_h])
+        # ---
+        f_bands = np.concatenate(
+            [f_band_zero, np.copy(f_bands_lin), np.copy(f_bands_md)], axis=0
+        )
+        # ---
+        # compute SPL values for hybrid frequency bands
+        milDecHy_array = np.array(
+            [
+                np.sum(df_psd["psd"][df_psd["f"].between(f_band[0], f_band[2])])
+                for f_band in f_bands
+            ]
+        )
+        milDecHy_array = milDecHy_array * df
+        # formatting outputs
+        # millidecades
+        df_spl = pd.DataFrame()
+        df_spl["f"] = np.copy(f_bands)[:, 1]
+        df_spl["val"] = milDecHy_array
+        # frequency bands in df
+        df_fbands = pd.DataFrame()
+        df_fbands["f_start"] = np.copy(f_bands)[:, 0]
+        df_fbands["f_center"] = np.copy(f_bands)[:, 1]
+        df_fbands["f_end"] = np.copy(f_bands)[:, 2]
+        # ---
+        return df_spl
 
     def spectrogram(self, data_file: DataFile, hydrophone: dict[str, any]):
-        print(f"Reading data from {data_file.file_path}")
         x, sample_rate = sf.read(data_file.file_path)
-        print(f"Sample rate: {sample_rate}")
         v = x * 3
         nsec = v.size / sample_rate
         spa = 1
         nseg = int(nsec / spa)
-        print(f"{nseg} segments of length {spa} seconds in {nsec} seconds of audio")
         nfreq = int(sample_rate / 2 + 1)
         sg = np.empty((nfreq, nseg), float)
         w = scipy.signal.get_window("hann", sample_rate)

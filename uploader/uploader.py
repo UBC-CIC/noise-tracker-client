@@ -5,6 +5,7 @@ import requests
 
 import constants
 import util
+from logger import logger
 
 
 class Uploader(threading.Thread):
@@ -23,6 +24,7 @@ class Uploader(threading.Thread):
         while True and not self.stopped():
             files = os.listdir(constants.RESULTS_TMP_PATH)
             for file in files:
+                logger.info(f"Uploading file {file} to S3")
                 file_name, extension = file.split(".")
                 hydrophone_id, timestamp, metric = file_name.split("_")
                 year, month, day, hour, minute, second = timestamp.split("-")
@@ -43,5 +45,6 @@ class Uploader(threading.Thread):
                     raise Exception(
                         f"Failed to upload file {file} to S3. Status code: {http_response.status_code}"
                     )
+                logger.info(f"Uploaded file {file} to S3")
                 os.remove(f"{constants.RESULTS_TMP_PATH}/{file}")
             time.sleep(self.config["upload_interval"])
