@@ -72,9 +72,18 @@ class Analyzer(threading.Thread):
             timestamp = data_file.timestamp + datetime.timedelta(seconds=i * 60)
             if len(chunk) == 60 * sample_rate:
                 spls[timestamp] = self.chunk_spl(chunk, sample_rate)
-        for timestamp, spl in spls.items():
-            result_path = f"{constants.RESULTS_TMP_PATH}/{data_file.hydrophone['id']}_{timestamp.strftime('%Y-%m-%d-%H-%M-%S')}_spl.json"
-            json.dump(spl.to_dict(orient="records"), open(result_path, "w"), indent=2)
+        for timestamp, spl_tuple in spls.items():
+            spl, bioband_spl = spl_tuple
+            spl_result_path = f"{constants.RESULTS_TMP_PATH}/{data_file.hydrophone['id']}_{timestamp.strftime('%Y-%m-%d-%H-%M-%S')}_spl.json"
+            bioband_spl_result_path = f"{constants.RESULTS_TMP_PATH}/{data_file.hydrophone['id']}_{timestamp.strftime('%Y-%m-%d-%H-%M-%S')}_biospl.json"
+            json.dump(
+                spl.to_dict(orient="records"), open(spl_result_path, "w"), indent=2
+            )
+            json.dump(
+                bioband_spl.to_dict(orient="records"),
+                open(bioband_spl_result_path, "w"),
+                indent=2,
+            )
 
     def chunk_spl(self, audioIn: np.array, fs: int):
         if len(audioIn) != 60.0 * fs:
@@ -149,6 +158,28 @@ class Analyzer(threading.Thread):
             ]
         )
         milDecHy_array = milDecHy_array * df
+        # --- bio-bands
+        bio_bands = np.array(
+            [
+                [10.0, "LF", 100.0],
+                [100.0, "MF", 1000.0],
+                [500.0, "KWCOM", 15000.0],
+                [15000.0, "KWECH", np.min([100000.0, fs / 2.0])],
+            ]
+        )
+        #
+        bioBands_array = np.array(
+            [
+                np.sum(
+                    df_psd["psd"][
+                        df_psd["f"].between(float(bio_band[0]), float(bio_band[2]))
+                    ]
+                )
+                for bio_band in bio_bands
+            ]
+        )
+        bioBands_array = bioBands_array * df
+
         # formatting outputs
         # millidecades
         df_spl = pd.DataFrame()
@@ -159,8 +190,13 @@ class Analyzer(threading.Thread):
         df_fbands["f_start"] = np.copy(f_bands)[:, 0]
         df_fbands["f_center"] = np.copy(f_bands)[:, 1]
         df_fbands["f_end"] = np.copy(f_bands)[:, 2]
+        # bio-bands
+        df_biobands = pd.DataFrame()
+        df_biobands["f_min"] = bio_bands[:, 0]
+        df_biobands["f_max"] = bio_bands[:, 2]
+        df_biobands["val"] = bioBands_array
         # ---
-        return df_spl
+        return df_spl, df_biobands
 
     def spectrogram(self, data_file: DataFile, hydrophone: dict[str, any]):
         x, sample_rate = sf.read(data_file.file_path)
