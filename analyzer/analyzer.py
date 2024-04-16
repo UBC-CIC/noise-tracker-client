@@ -165,6 +165,7 @@ class Analyzer(threading.Thread):
                 [100.0, "MF", 1000.0],
                 [500.0, "KWCOM", 15000.0],
                 [15000.0, "KWECH", np.min([100000.0, fs / 2.0])],
+                [10.0, "BB", fs / 2.0],
             ]
         )
         #
