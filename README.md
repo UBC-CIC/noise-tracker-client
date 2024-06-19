@@ -7,7 +7,6 @@ For more information please visit the [CIC Website](https://cic.ubc.ca/).
 | :-------------------------------------------------- | :------------------------------------------------------ |
 | [High Level Architecture](#high-level-architecture) | High level overview illustrating component interactions |
 | [Deployment](#deployment-guide)                     | How to deploy the project                               |
-| [User Guide](#user-guide)                           | The working solution                                    |
 | [Directories](#directories)                         | General project directory structure                     |
 | [Changelog](#changelog)                             | Any changes post publish                                |
 | [Credits](#credits)                                 | Meet the team behind the solution                       |
@@ -22,10 +21,6 @@ The following architecture diagram illustrates the workflow of the client applic
 ## Deployment Guide
 
 To deploy this solution, please follow the steps laid out in the [Deployment Guide](docs/DeploymentGuide.md)
-
-## User Guide
-
-For instructions on how hydrophone operators can interact with the client application, refer to the [Web App User Guide](docs/UserGuide.md).
 
 ## Directories
 
