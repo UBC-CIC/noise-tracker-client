@@ -2,7 +2,6 @@ import sys
 import os
 import json
 import requests
-import threading
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,

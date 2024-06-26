@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+from logger import logger
 
 
 class DataFile:
@@ -16,6 +17,9 @@ class DataFile:
         file_name = file_path.split("/")[-1]
         match = re.match(hydrophone["file_structure_pattern"], file_name)
         if not match:
+            logger.error(
+                f"File path {file_path} does not match the expected pattern {hydrophone['file_structure_pattern']}"
+            )
             raise ValueError(
                 f"File path {file_path} does not match the expected pattern {hydrophone['file_structure_pattern']}"
             )

@@ -42,9 +42,10 @@ class Uploader(threading.Thread):
                         files=files,
                     )
                 if http_response.status_code != 204:
-                    raise Exception(
+                    logger.error(
                         f"Failed to upload file {file} to S3. Status code: {http_response.status_code}"
                     )
-                logger.info(f"Uploaded file {file} to S3")
+                else:
+                    logger.info(f"Uploaded file {file} to S3")
                 os.remove(f"{constants.RESULTS_TMP_PATH}/{file}")
             time.sleep(self.config["upload_interval"])

@@ -54,10 +54,11 @@ class Analyzer(threading.Thread):
                         logger.info("Generating spectrogram")
                         self.spectrogram(data_file, hydrophone)
                     if "spl" in hydrophone["metrics"]:
-                        logger.info("Calculating SPL")
+                        logger.info(f"Calculating SPL for file: {file}")
                         self.spl(data_file)
                     with open(constants.PROCESSED_FILES_PATH, "a") as f:
                         f.write(file + "\n")
+                        logger.info(f"Added file {file} to processed files list")
                     self.processed_files.add(file)
                     logger.info(f"Processing finished for file: {file}")
                 time.sleep(self.config["scan_interval"])
@@ -84,6 +85,7 @@ class Analyzer(threading.Thread):
                 open(bioband_spl_result_path, "w"),
                 indent=2,
             )
+            logger.info(f"SPL results saved to {spl_result_path}")
 
     def chunk_spl(self, audioIn: np.array, fs: int):
         if len(audioIn) != 60.0 * fs:
