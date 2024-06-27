@@ -3,7 +3,7 @@
 This guide will walk you through the steps required to deploy the NoiseTracker Client application on your local machine and to distribute it to hydrophone operators.
 
 ## Prerequisites
-NoiseTracker client requires that the cloud backend is deployed. Please refer to the check out the [NoiseTracker Web Application](https://github.com/UBC-CIC/noise-tracker-web) for more information on how to deploy the backend.
+NoiseTracker client requires that the cloud backend is deployed. Please refer to the [NoiseTracker Web Application](https://github.com/UBC-CIC/noise-tracker-web) for more information on how to deploy the backend.
 
 ## Deployment Steps
 1. Clone the repository to your local machine:
