@@ -25,9 +25,12 @@ class Analyzer(threading.Thread):
             with open(constants.PROCESSED_FILES_PATH, "w") as f:
                 f.write("")
         processed_files: set[str] = set()
-        with open(constants.PROCESSED_FILES_PATH, "r") as f:
-            for line in f:
-                processed_files.add(line.strip())
+        try:
+            with open(constants.PROCESSED_FILES_PATH, "r") as f:
+                for line in f:
+                    processed_files.add(line.strip())
+        except FileNotFoundError:
+            logger.error("Processed files list not found")
         self.processed_files = processed_files
         self.config = config
 
@@ -56,9 +59,14 @@ class Analyzer(threading.Thread):
                     if "spl" in hydrophone["metrics"]:
                         logger.info(f"Calculating SPL for file: {file}")
                         self.spl(data_file)
-                    with open(constants.PROCESSED_FILES_PATH, "a") as f:
-                        f.write(file + "\n")
-                        logger.info(f"Added file {file} to processed files list")
+                    try:
+                        with open(constants.PROCESSED_FILES_PATH, "a") as f:
+                            f.write(file + "\n")
+                            logger.info(f"Added file {file} to processed files list")
+                    except Exception as e:
+                        logger.error(
+                            f"Failed to add file {file} to processed files list: {e}"
+                        )
                     self.processed_files.add(file)
                     logger.info(f"Processing finished for file: {file}")
                 time.sleep(self.config["scan_interval"])
