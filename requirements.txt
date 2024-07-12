@@ -32,7 +32,7 @@ PySide6==6.6.1
 PySide6-Addons==6.6.1
 PySide6-Essentials==6.6.1
 python-dateutil==2.8.2
-requests==2.31.0
+requests==2.32.2
 s3transfer==0.9.0
 scipy==1.11.4
 shiboken6==6.6.1
