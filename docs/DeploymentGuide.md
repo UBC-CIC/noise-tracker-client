@@ -31,7 +31,7 @@ NoiseTracker client requires that the cloud backend is deployed. Please refer to
 ## Distribution Steps
 1. Create a standalone executable:
     ```bash
-    pyinstaller --onefile --windowed main.py -n NoiseTracker --icon="<path-to-icon>"
+    pyinstaller --onefile --windowed main.py -n NoiseTracker --icon="./Icon.iconset/icon.png"
     ```
 2. The executable will be located in the `dist` directory. You can distribute this executable to hydrophone operators. To build for other operating systems, you need to run this process on the target operating system.
 
