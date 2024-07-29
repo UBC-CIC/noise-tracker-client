@@ -8,7 +8,7 @@ NoiseTracker client requires that the cloud backend is deployed. Please refer to
 ## Deployment Steps
 1. Clone the repository to your local machine:
     ```bash
-    git clone <repo-url>
+    git clone https://github.com/UBC-CIC/noise-tracker-client.git
     ```
 2. Inside the repository, create a virtual environment:
     ```bash
