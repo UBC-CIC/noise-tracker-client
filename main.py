@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import base64
 import requests
 from PySide6.QtWidgets import (
     QApplication,
@@ -87,9 +88,12 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            response = requests.get(constants.GET_OPERATOR_DETAILS_URL.format(user_id))
+            response = requests.get(
+                constants.GET_OPERATOR_DETAILS_URL, params={"operator_id": user_id}
+            )
             response.raise_for_status()
-            configs = response.json()
+            configs = json.loads(base64.b64decode(response.content))
+
             dialog = QWidget()
 
             layout = QVBoxLayout(dialog)

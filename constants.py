@@ -19,8 +19,5 @@ CONFIG_PATH = os.path.join(BASE_PATH, "config.json")
 
 
 # Fill in the following constants with the appropriate values
-BUCKET = ""  # name of the bucket
 PRESIGNED_UPLOAD_LINK_GENERATOR = ""  # url to the upload link generator lambda function
-GET_OPERATOR_DETAILS_URL = (
-    "" + "?operator_id={}"
-)  # url for operator configuration lambda function
+GET_OPERATOR_DETAILS_URL = ""  # url for operator configuration lambda function

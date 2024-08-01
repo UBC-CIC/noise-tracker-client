@@ -29,11 +29,15 @@ class Uploader(threading.Thread):
                 hydrophone_id, timestamp, metric = file_name.split("_")
                 year, month, day, hour, minute, second = timestamp.split("-")
                 object_key = f"{self.config['operator_id']}/{hydrophone_id}/{metric}/{year}/{month}/{timestamp}.{extension}"
-                presigned_response = util.get_presigned_upload_url(
-                    constants.PRESIGNED_UPLOAD_LINK_GENERATOR,
-                    constants.BUCKET,
-                    object_key,
-                )
+                try:
+                    presigned_response = util.get_presigned_upload_url(
+                        constants.PRESIGNED_UPLOAD_LINK_GENERATOR,
+                        object_key,
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to get presigned upload URL: {e}")
+                    time.sleep(self.config["upload_interval"])
+                    continue
                 with open(f"{constants.RESULTS_TMP_PATH}/{file}", "rb") as f:
                     files = {"file": (f"{constants.RESULTS_TMP_PATH}/{file}", f)}
                     http_response = requests.post(

@@ -1,6 +1,8 @@
 import os
 import re
 import requests
+import base64
+import json
 
 
 def find_files(directory, pattern):
@@ -12,7 +14,11 @@ def find_files(directory, pattern):
     return file_list
 
 
-def get_presigned_upload_url(url, bucket_name, object_key):
-    data = {"bucket_name": bucket_name, "object_key": object_key}
-    response = requests.get(url, json=data).json()
-    return response["body"]
+def get_presigned_upload_url(url, object_key):
+    params = {"object_key": object_key}
+    response = requests.get(url, params=params)
+    if response.status_code != 200:
+        raise Exception(
+            f"Failed to get presigned upload URL. Status code: {response.status_code}"
+        )
+    return json.loads(base64.b64decode(response.content))
